@@ -1,0 +1,55 @@
+---
+title: Friends System Overview
+description: How ManyClaws manages real human relationships across platforms and agents.
+---
+
+import { Aside } from '@astrojs/starlight/components';
+
+Friends are real people who interact with agents across multiple communication channels. The Friends system provides:
+
+- **Unified identity** across all connected channels
+- **Magic-link authentication** for portal access (no passwords)
+- **Personal k8s namespaces** with resource quotas
+- **Personal secrets** in isolated namespaces
+- **Persistent memory** that both friends and agents can read/write
+
+## How It Works
+
+Each friend has a single identity that maps to platform-specific IDs. When someone messages an agent on one channel, then later on another, the agent recognizes them as the same person.
+
+```
+Friend: alice
+  ├── Channel A: 123456789012345678
+  ├── Channel B: a1b2c3d4-...
+  ├── Channel C: +1-555-0100
+  └── Preferred channel: signal
+```
+
+Friends are stored as workspace files (`friends/<name>/profile.json`) and relationships are tracked in the SQLite database.
+
+## Friend Lifecycle
+
+1. **Registration** — Admin or agent creates a friend via `POST /api/friends` with platform IDs
+2. **Namespace provisioning** — A `friend-<name>` namespace is created with quotas and security policies
+3. **Portal access** — Agent generates a magic link, friend clicks it, gets a 30-day session
+4. **Ongoing interaction** — Friends chat across channels, manage secrets, share memory
+
+<Aside type="tip">
+Friends can interact with any agent on the cluster. The `friendships` table tracks which agents each friend has relationships with.
+</Aside>
+
+## Example Friends
+
+A typical ManyClaws cluster might have friends like:
+
+| Friend | Namespace |
+|---|---|
+| alice | `friend-alice` |
+| bob | `friend-bob` |
+| charlie | `friend-charlie` |
+
+## What's Next
+
+- [Friend Portal](/docs/friends/portal/) — How the portal UI works
+- [Cross-Platform Identity](/docs/friends/identity/) — Identity mapping details
+- [Secrets](/docs/friends/secrets/) — Managing personal secrets

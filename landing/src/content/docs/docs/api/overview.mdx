@@ -1,0 +1,85 @@
+---
+title: API Overview & Authentication
+description: Authentication model and general API conventions for the ManyClaws Controller API.
+---
+
+import { Aside } from '@astrojs/starlight/components';
+
+The ManyClaws Controller exposes a REST API at `https://admin.your-domain.net/api/*` and `https://<agent>.your-domain.net/api/*`.
+
+## Base URLs
+
+| URL | Purpose |
+|---|---|
+| `https://admin.your-domain.net/api/*` | Admin and agent API access |
+| `https://<agent>.your-domain.net/api/*` | Portal and auth endpoints (scoped to agent) |
+
+## Three-Tier Authentication
+
+The API uses three authentication levels:
+
+### 1. Admin Token
+
+Full access to all API routes. Set via `ADMIN_TOKEN` environment variable on the controller.
+
+```bash
+# Via query parameter
+curl https://admin.your-domain.net/api/agents?token=YOUR_ADMIN_TOKEN
+
+# Via header
+curl https://admin.your-domain.net/api/agents \
+  -H "Authorization: Bearer YOUR_ADMIN_TOKEN"
+```
+
+### 2. Agent Token
+
+Scoped access to `/api/auth/*` and `/api/friends/*` routes. Used by agents to manage friends and generate portal sessions.
+
+```bash
+curl https://admin.your-domain.net/api/friends \
+  -H "Authorization: Bearer YOUR_AGENT_TOKEN"
+```
+
+The agent token is stored as `AGENT_API_TOKEN` in the controller and `MANYCLAWS_API_TOKEN` in the agent's secrets.
+
+### 3. Friend Session
+
+Scoped access to `/api/portal/*` routes only. Created via magic link authentication.
+
+```bash
+curl https://my-agent.your-domain.net/api/portal/me \
+  -H "Authorization: Bearer SESSION_TOKEN"
+```
+
+Sessions are created by `POST /api/auth/portal-session` and expire after 30 days.
+
+## Public Endpoints
+
+These endpoints require no authentication:
+
+| Method | Path | Description |
+|---|---|---|
+| `GET` | `/api/health` | Cluster health status |
+| `GET` | `/api/auth/verify/:token` | Consume magic link (redirects to portal) |
+
+## Response Format
+
+All API responses are JSON. Errors follow this pattern:
+
+```json
+{"error": "Description of what went wrong"}
+```
+
+Successful mutations typically return:
+
+```json
+{"ok": true}
+```
+
+## Rate Limiting
+
+There is no rate limiting at the API level. Cloudflare Access provides the authentication boundary, and all traffic must pass through the Cloudflare tunnel.
+
+<Aside type="caution">
+The API is not designed for public consumption. It's an internal API for the admin dashboard, agent communication, and friend portal. All access is behind Cloudflare Access zero-trust authentication.
+</Aside>

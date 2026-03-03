@@ -1,0 +1,76 @@
+---
+title: Cluster API
+description: API endpoints for cluster health and resource monitoring.
+---
+
+import ApiEndpoint from '@components/docs/ApiEndpoint.astro';
+
+## Health Check
+
+<ApiEndpoint method="GET" path="/api/health" auth="public" description="Public health endpoint. Returns cluster health status and agent readiness. Also triggers expired session cleanup." />
+
+**Response:**
+
+```json
+{
+  "status": "healthy",
+  "agents": [
+    {"name": "my-agent", "ready": true, "status": "Running"}
+  ],
+  "timestamp": "2026-03-02T12:00:00.000Z"
+}
+```
+
+The `status` field is:
+- `"healthy"` — All agents are ready
+- `"degraded"` — One or more agents are not ready
+
+## Cluster Info
+
+<ApiEndpoint method="GET" path="/api/cluster" auth="admin" description="Node resources, capacity, and allocation details." />
+
+**Response:**
+
+```json
+{
+  "nodes": [
+    {
+      "name": "my-node",
+      "status": "Ready",
+      "capacity": {
+        "cpu": "8",
+        "memory": "15Gi",
+        "pods": "110"
+      },
+      "allocatable": {
+        "cpu": "8",
+        "memory": "14.5Gi",
+        "pods": "110"
+      }
+    }
+  ]
+}
+```
+
+## Recommended Infrastructure
+
+| Component | Details |
+|---|---|
+| **Server** | Any VPS or bare-metal server |
+| **CPU** | 4+ cores recommended |
+| **RAM** | 8 GB minimum, 16 GB recommended |
+| **Disk** | 50+ GB |
+| **k8s** | k3s (recommended) or any conformant cluster |
+| **Ingress** | Traefik (bundled with k3s) |
+| **Storage** | local-path-provisioner or any CSI driver |
+
+Current resource usage per component:
+
+| Component | RAM |
+|---|---|
+| k3s control plane + Traefik | ~160 MB |
+| cloudflared | ~18 MB |
+| manyclaws-controller | ~80 MB |
+| Per agent (typical) | ~520 MB |
+
+Comfortable capacity: 5-8 agents on 16 GB RAM. For 10+ agents, upgrade to 32 GB RAM.

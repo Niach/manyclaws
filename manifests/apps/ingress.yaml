@@ -1,0 +1,32 @@
+# tegridy.cc → nginx
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: tegridy
+  namespace: apps
+spec:
+  entryPoints:
+  - web
+  routes:
+  - match: Host(`tegridy.cc`)
+    kind: Rule
+    services:
+    - name: nginx
+      port: 80
+---
+# bank.tegridy.cc → bank-tracker (in friend-danny namespace)
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: bank-tracker
+  namespace: apps
+spec:
+  entryPoints:
+  - web
+  routes:
+  - match: Host(`bank.tegridy.cc`)
+    kind: Rule
+    services:
+    - name: bank-tracker
+      port: 3420
+      namespace: friend-danny

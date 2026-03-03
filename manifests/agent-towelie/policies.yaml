@@ -1,0 +1,79 @@
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  name: agent-quota
+  namespace: agent-towelie
+spec:
+  hard:
+    requests.cpu: "4"
+    requests.memory: 3Gi
+    limits.cpu: "4"
+    limits.memory: 3Gi
+    pods: "10"
+    persistentvolumeclaims: "8"
+---
+apiVersion: v1
+kind: LimitRange
+metadata:
+  name: agent-limits
+  namespace: agent-towelie
+spec:
+  limits:
+  - type: Container
+    default:
+      cpu: 500m
+      memory: 256Mi
+    defaultRequest:
+      cpu: 100m
+      memory: 128Mi
+    max:
+      cpu: "2"
+      memory: 2Gi
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: agent-isolation
+  namespace: agent-towelie
+spec:
+  podSelector: {}
+  policyTypes:
+  - Ingress
+  - Egress
+  ingress:
+  # Allow from manyclaws-system (cloudflared, controller)
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          kubernetes.io/metadata.name: manyclaws-system
+  # Allow from kube-system (Traefik ingress)
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          kubernetes.io/metadata.name: kube-system
+  egress:
+  # Allow DNS
+  - to:
+    - namespaceSelector:
+        matchLabels:
+          kubernetes.io/metadata.name: kube-system
+    ports:
+    - protocol: UDP
+      port: 53
+    - protocol: TCP
+      port: 53
+  # Allow internet egress (Discord, Signal, WhatsApp, Anthropic API, etc.)
+  - to:
+    - ipBlock:
+        cidr: 0.0.0.0/0
+        except:
+        - 10.42.0.0/16
+        - 10.43.0.0/16
+  # Allow traffic to manyclaws-system (controller API)
+  - to:
+    - namespaceSelector:
+        matchLabels:
+          kubernetes.io/metadata.name: manyclaws-system
+  # Allow within own namespace
+  - to:
+    - podSelector: {}

@@ -1,0 +1,142 @@
+---
+title: Portal API
+description: API endpoints for the friend portal — profile, namespace, memory, cron jobs.
+---
+
+import ApiEndpoint from '@components/docs/ApiEndpoint.astro';
+import { Aside } from '@astrojs/starlight/components';
+
+All portal endpoints require a valid friend session token via `Authorization: Bearer <token>`.
+
+## Profile
+
+<ApiEndpoint method="GET" path="/api/portal/me" auth="friend" description="Get the current friend's profile, display name, namespace, and stats (log count, secret count)." />
+
+**Response:**
+
+```json
+{
+  "id": "alice",
+  "display_name": "Alice",
+  "preferred_channel": "signal",
+  "namespace": "friend-alice",
+  "stats": {
+    "logs": 42,
+    "secrets": 3
+  }
+}
+```
+
+## Agent Relationships
+
+<ApiEndpoint method="GET" path="/api/portal/agents" auth="friend" description="List agent relationships for the current friend (from friendships table)." />
+
+## Namespace Overview
+
+<ApiEndpoint method="GET" path="/api/portal/namespace" auth="friend" description="Full namespace overview: pods, services, deployments, quota, and IngressRoutes." />
+
+**Response:**
+
+```json
+{
+  "pods": [...],
+  "services": [...],
+  "deployments": [
+    {
+      "name": "my-app",
+      "replicas": "1/1",
+      "image": "nginx:alpine",
+      "age": "2026-03-01T10:00:00Z",
+      "secretRefs": ["my-api-key"]
+    }
+  ],
+  "quota": {...},
+  "ingressRoutes": [
+    {"name": "expose-my-app", "hostname": "my-app-alice.your-domain.net", "service": "my-app"}
+  ]
+}
+```
+
+## Available Domains
+
+<ApiEndpoint method="GET" path="/api/portal/domains" auth="friend" description="List available domains for service exposure." />
+
+## Service Exposure
+
+<ApiEndpoint method="POST" path="/api/portal/namespace/expose" auth="friend" description="Expose a service publicly. Creates IngressRoute + DNS record. Name must be alphanumeric + hyphens, 1-20 chars." />
+
+**Body:**
+
+```json
+{
+  "name": "my-app",
+  "service": "my-app",
+  "port": 80,
+  "domain": "your-domain.net"
+}
+```
+
+<ApiEndpoint method="DELETE" path="/api/portal/namespace/expose/:name" auth="friend" description="Remove a service exposure. Deletes IngressRoute and DNS record." />
+
+## Workspace Memory
+
+<ApiEndpoint method="GET" path="/api/portal/workspace/memory" auth="friend" description="Read the friend's editable MEMORY.md file." />
+
+**Response:**
+
+```json
+{
+  "content": "# My Notes\n\nRemember to ask the agent about...",
+  "exists": true
+}
+```
+
+<ApiEndpoint method="PUT" path="/api/portal/workspace/memory" auth="friend" description="Update the friend's MEMORY.md file." />
+
+**Body:**
+
+```json
+{"content": "# Updated Notes\n\n..."}
+```
+
+<ApiEndpoint method="GET" path="/api/portal/workspace/friend-notes" auth="friend" description="Read the agent's notes about you (read-only)." />
+
+## Heartbeat
+
+<ApiEndpoint method="GET" path="/api/portal/workspace/heartbeat" auth="friend" description="Read the agent's HEARTBEAT.md scheduler config." />
+
+<ApiEndpoint method="PUT" path="/api/portal/workspace/heartbeat" auth="friend" description="Update the HEARTBEAT.md config." />
+
+## Cron Jobs
+
+<ApiEndpoint method="GET" path="/api/portal/workspace/crons" auth="friend" description="List cron jobs targeting the current friend's sessions." />
+
+<ApiEndpoint method="POST" path="/api/portal/workspace/crons" auth="friend" description="Create a new cron job. Must target the friend's own session or contact." />
+
+<Aside type="caution">
+The cron job must target the current friend (via `session` or `to` field). Attempting to create a cron for another friend returns 403.
+</Aside>
+
+**Body:**
+
+```json
+{
+  "name": "daily-check",
+  "message": "Check my portfolio",
+  "cron": "0 9 * * *",
+  "session": "agent:main:direct:channel:alice",
+  "tz": "Europe/Berlin"
+}
+```
+
+<ApiEndpoint method="DELETE" path="/api/portal/workspace/crons/:name" auth="friend" description="Delete a cron job (must be owned by the friend)." />
+
+<ApiEndpoint method="POST" path="/api/portal/workspace/crons/:name/run" auth="friend" description="Manually trigger a cron job." />
+
+<ApiEndpoint method="POST" path="/api/portal/workspace/crons/:name/toggle" auth="friend" description="Enable or disable a cron job." />
+
+**Body:**
+
+```json
+{"enabled": true}
+```

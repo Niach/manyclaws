@@ -1,0 +1,56 @@
+---
+title: Memory System
+description: How memories are shared between friends and agents.
+---
+
+import { Aside } from '@astrojs/starlight/components';
+
+ManyClaws has a layered memory system that lets friends and agents maintain persistent knowledge across sessions.
+
+## Memory Layers
+
+### 1. Friend's MEMORY.md (Editable)
+
+Each friend has a `MEMORY.md` file in the agent's workspace:
+
+```
+workspace/friends/alice/MEMORY.md
+```
+
+- Friends can view and edit this via the portal (`PUT /api/portal/workspace/memory`)
+- The agent reads this file when starting a session with the friend
+- Content persists across sessions and agent restarts
+
+### 2. Agent's Notes (Read-Only to Friends)
+
+The agent maintains its own notes about each friend:
+
+```
+workspace/friends/alice/notes.md
+```
+
+- Written by the agent during conversations
+- Friends can view these via the portal (read-only)
+- Contains the agent's observations and context
+
+### 3. Daily Logs
+
+Raw session transcripts are stored as daily log files:
+
+```
+workspace/memory/YYYY-MM-DD.md          # Agent-wide daily log
+workspace/friends/alice/memory/          # Friend-specific daily logs
+```
+
+## Session Reset
+
+<Aside type="caution">
+Agent sessions reset daily at 4 AM (Europe/Berlin). The agent wakes fresh and re-reads its memory files. This means in-context conversation history is lost, but file-based memories persist.
+</Aside>
+
+## Memory Security
+
+- `MEMORY.md` in the main workspace is only loaded in direct/main sessions, not group chats
+- Friend-editable `MEMORY.md` files are scoped to the friend's directory
+- The agent cannot modify a friend's `MEMORY.md` directly — only the friend can via the portal
+- Daily logs are append-only during a session

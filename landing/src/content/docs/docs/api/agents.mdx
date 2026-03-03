@@ -1,0 +1,87 @@
+---
+title: Agents API
+description: API endpoints for managing and monitoring agents.
+---
+
+import ApiEndpoint from '@components/docs/ApiEndpoint.astro';
+
+All agent endpoints require admin authentication.
+
+## List Agents
+
+<ApiEndpoint method="GET" path="/api/agents" auth="admin" description="List all agents across the cluster. Returns array of agent info objects with name, status, and readiness." />
+
+**Response:**
+
+```json
+[
+  {
+    "name": "my-agent",
+    "namespace": "agent-my-agent",
+    "ready": true,
+    "status": "Running",
+    "image": "ghcr.io/manyclaws/agent:latest"
+  }
+]
+```
+
+## Get Agent Details
+
+<ApiEndpoint method="GET" path="/api/agents/:name" auth="admin" description="Get detailed agent information including pods, resource quota, and health status." />
+
+**Parameters:**
+- `name` (path) — Agent name (e.g., `my-agent`)
+
+**Response:**
+
+```json
+{
+  "name": "my-agent",
+  "namespace": "agent-my-agent",
+  "ready": true,
+  "status": "Running",
+  "image": "ghcr.io/manyclaws/agent:latest",
+  "pods": [
+    {
+      "name": "openclaw-gateway-7d4f8b6c9-x2k4p",
+      "status": "Running",
+      "ready": true,
+      "restarts": 0,
+      "age": "14d"
+    }
+  ],
+  "quota": {
+    "cpu": {"used": "250m", "hard": "4"},
+    "memory": {"used": "520Mi", "hard": "3Gi"},
+    "pods": {"used": "1", "hard": "10"}
+  }
+}
+```
+
+## Restart Agent
+
+<ApiEndpoint method="POST" path="/api/agents/:name/restart" auth="admin" description="Initiate a rolling restart of the agent's openclaw-gateway deployment." />
+
+**Parameters:**
+- `name` (path) — Agent name
+
+**Response:**
+
+```json
+{"ok": true, "message": "Agent my-agent restart initiated"}
+```
+
+## Stream Agent Logs
+
+<ApiEndpoint method="GET" path="/api/agents/:name/logs" auth="admin" description="SSE stream of the agent's pod logs (last 100 lines)." />
+
+**Parameters:**
+- `name` (path) — Agent name
+
+**Response:** Server-Sent Events stream:
+
+```
+data: {"line": "ManyClaws Agent Gateway started on port 18789"}
+data: {"line": "[channel] Connected successfully"}
+data: {"line": "[channel] Bot ready as YourAgent#0001"}
+```

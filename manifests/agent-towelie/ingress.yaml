@@ -1,0 +1,32 @@
+# /portal and /api/* → controller (friend portal + APIs)
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: towelie-portal
+  namespace: agent-towelie
+spec:
+  entryPoints:
+  - web
+  routes:
+  - match: Host(`towelie.manyclaws.net`) && (PathPrefix(`/portal`) || PathPrefix(`/api`))
+    kind: Rule
+    services:
+    - name: manyclaws-controller
+      namespace: manyclaws-system
+      port: 80
+---
+# Everything else (root /, WebSocket) → gateway
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: towelie-gateway
+  namespace: agent-towelie
+spec:
+  entryPoints:
+  - web
+  routes:
+  - match: Host(`towelie.manyclaws.net`)
+    kind: Rule
+    services:
+    - name: openclaw-gateway
+      port: 18789

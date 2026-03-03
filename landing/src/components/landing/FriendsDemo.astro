@@ -1,0 +1,144 @@
+---
+---
+<section id="friends" class="py-24 px-6">
+  <div class="max-w-6xl mx-auto">
+    <div class="text-center mb-16 fade-in">
+      <h2 class="text-3xl sm:text-4xl font-bold text-white">
+        Give your friends their own <span style="color: #EC4899;">namespace.</span>
+      </h2>
+      <p class="mt-4 text-gray-400 max-w-xl mx-auto">
+        Your friend messages the agent. The agent writes code, deploys it to their
+        namespace, and puts it live on the internet. All from a chat message.
+      </p>
+    </div>
+
+    <!-- Lifecycle steps -->
+    <div class="grid md:grid-cols-4 gap-6 fade-in">
+      <div class="relative glass p-5 rounded-xl text-center glow-pink">
+        <div class="absolute -top-3 left-1/2 -translate-x-1/2 w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold" style="background: #EC4899; color: white;">1</div>
+        <div class="text-2xl mt-2 mb-3">🔗</div>
+        <h4 class="text-white font-semibold text-sm mb-1">Magic Link</h4>
+        <p class="text-xs text-gray-400">Agent sends a login link via any connected channel. One click, no password, 30-day session.</p>
+      </div>
+
+      <div class="relative glass p-5 rounded-xl text-center">
+        <div class="absolute -top-3 left-1/2 -translate-x-1/2 w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold" style="background: #8B5CF6; color: white;">2</div>
+        <div class="text-2xl mt-2 mb-3">🏠</div>
+        <h4 class="text-white font-semibold text-sm mb-1">Friend Portal</h4>
+        <p class="text-xs text-gray-400">Personal dashboard to manage secrets, view deployments, edit memory, and control cron jobs.</p>
+      </div>
+
+      <div class="relative glass p-5 rounded-xl text-center">
+        <div class="absolute -top-3 left-1/2 -translate-x-1/2 w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold" style="background: #06B6D4; color: white;">3</div>
+        <div class="text-2xl mt-2 mb-3">💬</div>
+        <h4 class="text-white font-semibold text-sm mb-1">Vibe-Code Together</h4>
+        <p class="text-xs text-gray-400">Friends describe what they want in chat. The agent writes code, deploys it to their namespace, and exposes it publicly.</p>
+      </div>
+
+      <div class="relative glass p-5 rounded-xl text-center">
+        <div class="absolute -top-3 left-1/2 -translate-x-1/2 w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold" style="background: #10B981; color: white;">4</div>
+        <div class="text-2xl mt-2 mb-3">🌐</div>
+        <h4 class="text-white font-semibold text-sm mb-1">Live on the Internet</h4>
+        <p class="text-xs text-gray-400">Auto-provisioned subdomain, Cloudflare DNS, TLS &mdash; their app is live in seconds. All from a chat message.</p>
+      </div>
+    </div>
+
+    <!-- Portal mock -->
+    <div class="mt-16 fade-in">
+      <h3 class="text-center text-white font-semibold text-lg mb-6">The Friend Portal</h3>
+      <div class="glass rounded-2xl overflow-hidden glow-purple max-w-4xl mx-auto">
+        <!-- Portal header -->
+        <div class="px-6 py-4 flex items-center justify-between border-b border-white/5" style="background: rgba(15, 15, 35, 0.6);">
+          <div class="flex items-center gap-3">
+            <span class="text-lg">🦀</span>
+            <span class="text-white font-semibold text-sm">ManyClaws Portal</span>
+            <span class="text-xs px-2 py-0.5 rounded-full" style="background: rgba(16, 185, 129, 0.15); color: #6EE7B7;">alice</span>
+          </div>
+          <div class="flex items-center gap-4 text-xs text-gray-500">
+            <span>friend-alice</span>
+            <span class="w-2 h-2 rounded-full bg-green-400"></span>
+          </div>
+        </div>
+        <!-- Portal content -->
+        <div class="p-6 grid md:grid-cols-3 gap-4">
+          <!-- Secrets panel -->
+          <div class="p-4 rounded-xl" style="background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.05);">
+            <div class="flex items-center gap-2 mb-3">
+              <span class="text-sm">🔑</span>
+              <span class="text-white text-xs font-semibold">Secrets</span>
+              <span class="ml-auto text-[10px] px-1.5 py-0.5 rounded" style="background: rgba(139, 92, 246, 0.2); color: #A78BFA;">3</span>
+            </div>
+            <div class="space-y-2">
+              <div class="flex items-center justify-between p-2 rounded text-xs" style="background: rgba(0,0,0,0.2);">
+                <span class="text-gray-300 font-mono">openai-key</span>
+                <span class="text-gray-600">Opaque</span>
+              </div>
+              <div class="flex items-center justify-between p-2 rounded text-xs" style="background: rgba(0,0,0,0.2);">
+                <span class="text-gray-300 font-mono">github-token</span>
+                <span class="text-gray-600">Opaque</span>
+              </div>
+              <div class="flex items-center justify-between p-2 rounded text-xs" style="background: rgba(0,0,0,0.2);">
+                <span class="text-gray-300 font-mono">db-credentials</span>
+                <span class="text-gray-600">Opaque</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Deployments panel -->
+          <div class="p-4 rounded-xl" style="background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.05);">
+            <div class="flex items-center gap-2 mb-3">
+              <span class="text-sm">🚀</span>
+              <span class="text-white text-xs font-semibold">Deployments</span>
+              <span class="ml-auto text-[10px] px-1.5 py-0.5 rounded" style="background: rgba(16, 185, 129, 0.2); color: #6EE7B7;">2</span>
+            </div>
+            <div class="space-y-2">
+              <div class="p-2 rounded text-xs" style="background: rgba(0,0,0,0.2);">
+                <div class="flex items-center justify-between">
+                  <span class="text-gray-300">crypto-tracker</span>
+                  <span style="color: #6EE7B7;">1/1</span>
+                </div>
+                <div class="text-gray-600 text-[10px] mt-1 font-mono">crypto-alice.domain.net</div>
+              </div>
+              <div class="p-2 rounded text-xs" style="background: rgba(0,0,0,0.2);">
+                <div class="flex items-center justify-between">
+                  <span class="text-gray-300">postgres</span>
+                  <span style="color: #6EE7B7;">1/1</span>
+                </div>
+                <div class="text-gray-600 text-[10px] mt-1 font-mono">internal</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Memory & Quota panel -->
+          <div class="p-4 rounded-xl" style="background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.05);">
+            <div class="flex items-center gap-2 mb-3">
+              <span class="text-sm">🧠</span>
+              <span class="text-white text-xs font-semibold">Memory</span>
+            </div>
+            <div class="p-2 rounded text-xs font-mono mb-3" style="background: rgba(0,0,0,0.2); color: #e3e5ec;">
+              <span class="text-gray-500"># alice/MEMORY.md</span><br/>
+              Prefers Python for backends.<br/>
+              Working on crypto portfolio<br/>
+              tracker since Feb 2026.
+            </div>
+            <div class="flex items-center gap-2 mb-2">
+              <span class="text-sm">📊</span>
+              <span class="text-white text-xs font-semibold">Quota</span>
+            </div>
+            <div class="grid grid-cols-2 gap-1 text-[10px]">
+              <div class="p-1.5 rounded text-center" style="background: rgba(0,0,0,0.2);">
+                <div class="text-gray-500">CPU</div>
+                <div class="text-cyan-400 font-mono">200m/500m</div>
+              </div>
+              <div class="p-1.5 rounded text-center" style="background: rgba(0,0,0,0.2);">
+                <div class="text-gray-500">RAM</div>
+                <div class="text-cyan-400 font-mono">180Mi/512Mi</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</section>

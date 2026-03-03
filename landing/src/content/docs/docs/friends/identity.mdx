@@ -1,0 +1,66 @@
+---
+title: Cross-Platform Identity
+description: How friends are identified across messaging channels.
+---
+
+import { Aside } from '@astrojs/starlight/components';
+
+ManyClaws agents communicate across multiple channels. The identity system ensures a friend is recognized as the same person regardless of which channel they use.
+
+## Identity Mapping
+
+Each friend has a `profile.json` in the agent's workspace:
+
+```json
+// workspace/friends/alice/profile.json
+{
+  "display_name": "Alice",
+  "discord_id": "123456789012345678",
+  "signal": "+1-555-0100",
+  "whatsapp": "+1-555-0100",
+  "preferred_channel": "signal"
+}
+```
+
+When a message arrives on any channel, the agent resolves the sender's platform-specific ID to the friend's unified identity.
+
+## Platform-Specific IDs
+
+Each channel type uses its own identifier format. Some examples:
+
+- **Discord** — User snowflake (numeric string), e.g. `123456789012345678`
+- **Signal** — UUID or phone number, e.g. `+1-555-0100`
+- **WhatsApp** — Phone number or JID, e.g. `+1-555-0100`
+
+OpenClaw supports additional channels via its adapter system. Each adapter provides a sender ID that maps to the friend's unified identity.
+
+<Aside type="caution">
+Some channels can share the same phone number (e.g. Signal and WhatsApp), but they are separate channels with separate sessions.
+</Aside>
+
+## Preferred Channel
+
+Each friend has a `preferred_channel` field that agents use when they need to proactively reach out. This is stored in `profile.json` and can be updated via the API.
+
+## Session Isolation
+
+Even though a friend has one identity, their sessions are isolated per channel:
+
+```
+agent:main:direct:signal:+1-555-0100       → Signal DM session
+agent:main:direct:discord:123456789012345  → Discord DM session
+agent:main:direct:whatsapp:+1-555-0100     → WhatsApp DM session
+```
+
+This means conversation history does not leak between channels. The agent knows who you are, but each channel conversation is separate.
+
+## Adding Platform IDs
+
+Update a friend's identity via the API:
+
+```bash
+curl -X PUT https://admin.your-domain.net/api/friends/alice \
+  -H "Authorization: Bearer $ADMIN_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"signal": "+1-555-0100", "discord_id": "123456789012345678"}'
+```

@@ -1,0 +1,103 @@
+---
+title: Friends API
+description: API endpoints for friend CRUD, namespace management, and service exposure.
+---
+
+import ApiEndpoint from '@components/docs/ApiEndpoint.astro';
+import { Aside } from '@astrojs/starlight/components';
+
+Friend endpoints accept both admin and agent tokens.
+
+## List Friends
+
+<ApiEndpoint method="GET" path="/api/friends" auth="admin" description="List all friends with their platform IDs and namespace info." />
+
+**Response:**
+
+```json
+[
+  {
+    "id": "alice",
+    "display_name": "Alice",
+    "discord_id": "123456789012345678",
+    "signal": "+1-555-0100",
+    "whatsapp": "+1-555-0100",
+    "preferred_channel": "signal",
+    "namespace": "friend-alice"
+  }
+]
+```
+
+## Create Friend
+
+<ApiEndpoint method="POST" path="/api/friends" auth="admin" description="Create a new friend, provision their k8s namespace, and write profile.json to workspace." />
+
+**Body:**
+
+```json
+{
+  "id": "alice",
+  "display_name": "Alice",
+  "discord_id": "123456789012345678",
+  "signal": "+1-555-0100",
+  "whatsapp": "+1-555-0100",
+  "preferred_channel": "signal"
+}
+```
+
+Only `id` and `display_name` are required.
+
+## Get Friend
+
+<ApiEndpoint method="GET" path="/api/friends/:id" auth="admin" description="Get friend details including profile and agent relationships." />
+
+## Update Friend
+
+<ApiEndpoint method="PUT" path="/api/friends/:id" auth="admin" description="Update friend profile fields (display_name, platform IDs, preferred_channel)." />
+
+## Secrets
+
+<ApiEndpoint method="GET" path="/api/friends/:id/secrets" auth="admin" description="List secrets in the friend's namespace." />
+
+## Namespace Management
+
+<ApiEndpoint method="POST" path="/api/friends/:id/namespace/provision" auth="admin" description="Provision (or re-provision) the friend's k8s namespace with quotas and policies." />
+
+<ApiEndpoint method="POST" path="/api/friends/:id/namespace/apply" auth="admin" description="Apply k8s manifests to the friend's namespace. Allowed kinds: Deployment, Service, ConfigMap, Job, CronJob." />
+
+<ApiEndpoint method="GET" path="/api/friends/:id/namespace/pods" auth="admin" description="List pods in the friend's namespace." />
+
+<ApiEndpoint method="GET" path="/api/friends/:id/namespace/status" auth="admin" description="Full namespace overview: pods, services, deployments, quota." />
+
+<ApiEndpoint method="DELETE" path="/api/friends/:id/namespace/deployments/:name" auth="admin" description="Delete a deployment from the friend's namespace." />
+
+<ApiEndpoint method="GET" path="/api/friends/:id/namespace/logs/:pod" auth="admin" description="Get logs from a specific pod. Optional ?tail=N (default 100, max 500)." />
+
+## Service Exposure
+
+<ApiEndpoint method="POST" path="/api/friends/:id/namespace/expose" auth="admin" description="Expose a service publicly via IngressRoute + Cloudflare DNS." />
+
+**Body:**
+
+```json
+{
+  "name": "my-app",
+  "service": "my-app",
+  "port": 80,
+  "domain": "your-domain.net"
+}
+```
+
+**Response:**
+
+```json
+{
+  "ok": true,
+  "hostname": "my-app-alice.your-domain.net",
+  "url": "https://my-app-alice.your-domain.net"
+}
+```
+
+<Aside>
+The controller creates both the Traefik IngressRoute and the Cloudflare DNS CNAME record automatically.
+</Aside>

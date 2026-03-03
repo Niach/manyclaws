@@ -1,0 +1,76 @@
+---
+title: Data Model
+description: Database schema and workspace file structure for the Friends system.
+---
+
+import { Aside } from '@astrojs/starlight/components';
+
+The Friends system uses both SQLite tables (in the controller) and workspace files (in the agent pod) for data storage.
+
+## SQLite Tables
+
+The controller database (`/data/manyclaws.db`) contains:
+
+### friends
+
+<Aside>
+Note: Friend data has been migrated to workspace-based `profile.json` files. This table may be deprecated in future versions.
+</Aside>
+
+| Column | Type | Description |
+|---|---|---|
+| `id` | TEXT PK | Slug identifier (e.g., `"alice"`) |
+| `display_name` | TEXT | Human-readable name |
+| `discord_id` | TEXT | Discord user snowflake |
+| `signal_uuid` | TEXT | Signal UUID |
+| `whatsapp_id` | TEXT | WhatsApp phone/JID |
+| `preferred_channel` | TEXT | Preferred contact method |
+| `namespace` | TEXT | k8s namespace (`friend-<id>`) |
+| `created_at` | DATETIME | Creation timestamp |
+
+### friendships
+
+| Column | Type | Description |
+|---|---|---|
+| `agent_id` | TEXT | Agent name (composite PK) |
+| `friend_id` | TEXT FK | → `friends.id` (composite PK) |
+| `status` | TEXT | `active` / `inactive` / `blocked` |
+| `created_at` | DATETIME | When relationship started |
+
+### sessions
+
+| Column | Type | Description |
+|---|---|---|
+| `token` | TEXT PK | Session token (nanoid, 32 chars) |
+| `friend_id` | TEXT FK | → `friends.id` |
+| `expires_at` | DATETIME | Expiration timestamp (30 days) |
+
+## Workspace File Structure
+
+Per-friend data in the agent's workspace:
+
+```
+workspace/friends/<name>/
+├── profile.json        # Contact info, platform IDs, preferred channel
+├── notes.md            # Agent's notes about the friend
+├── MEMORY.md           # Friend-editable memory (portal-visible)
+├── memory/             # Friend-specific daily logs
+│   ├── 2026-03-01.md
+│   └── 2026-03-02.md
+└── projects/           # Friend-owned projects
+    └── my-project/
+```
+
+### profile.json
+
+```json
+{
+  "display_name": "Alice",
+  "discord_id": "123456789012345678",
+  "signal": "+1-555-0100",
+  "whatsapp": "+1-555-0100",
+  "preferred_channel": "signal"
+}
+```
+
+This file is the source of truth for friend identity. The controller reads it via `readWorkspaceFile()` which exec's into the agent pod.

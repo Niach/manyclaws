@@ -1,0 +1,92 @@
+---
+title: Authentication API
+description: API endpoints for magic links, session management, and identity verification.
+---
+
+import ApiEndpoint from '@components/docs/ApiEndpoint.astro';
+import { Aside } from '@astrojs/starlight/components';
+
+## Create Portal Session
+
+<ApiEndpoint method="POST" path="/api/auth/portal-session" auth="agent" description="Create a portal session for a friend and return the portal URL. This is the primary way agents grant portal access." />
+
+**Body:**
+
+```json
+{
+  "friend_id": "alice",
+  "agent": "my-agent"
+}
+```
+
+The `agent` field is optional and defaults to the current agent.
+
+**Response:**
+
+```json
+{
+  "portal_url": "https://my-agent.your-domain.net/portal?s=abc123...",
+  "session_token": "abc123...",
+  "expires_at": "2026-04-01T12:00:00.000Z",
+  "expires_in": 2592000
+}
+```
+
+## Create Magic Link (Legacy)
+
+<ApiEndpoint method="POST" path="/api/auth/magic-link" auth="agent" description="Legacy endpoint — creates a session and returns a portal URL. Uses the Host header to determine the agent." />
+
+**Body:**
+
+```json
+{"friend_id": "alice"}
+```
+
+**Response:**
+
+```json
+{
+  "portal_url": "https://my-agent.your-domain.net/portal?s=abc123...",
+  "session_token": "abc123...",
+  "link": "/portal?s=abc123...",
+  "expires_in": 2592000
+}
+```
+
+## Verify Token
+
+<ApiEndpoint method="GET" path="/api/auth/verify/:token" auth="public" description="Verify a session token and redirect to the portal. Used when friends click magic links." />
+
+**Parameters:**
+- `token` (path) — Session token from magic link
+
+**Behavior:**
+- If valid: redirects to `https://<agent>.your-domain.net/portal?s=<token>`
+- If expired/invalid: returns `401 {"error": "Link expired or invalid"}`
+
+<Aside>
+This endpoint checks if the token exists as a valid session. It redirects rather than returning JSON, so it's designed to be visited in a browser.
+</Aside>
+
+## Get Current User
+
+<ApiEndpoint method="GET" path="/api/auth/me" auth="friend" description="Get the current friend's profile based on their session token." />
+
+**Response:**
+
+```json
+{
+  "id": "alice",
+  "display_name": "Alice",
+  "preferred_channel": "signal",
+  "namespace": "friend-alice"
+}
+```
+
+## Session Details
+
+- Sessions are stored in the `sessions` SQLite table
+- Default TTL: 30 days
+- Token format: nanoid (32 characters)
+- Expired sessions are cleaned up on each `/api/health` call
+- Sessions persist across controller restarts (SQLite-backed)

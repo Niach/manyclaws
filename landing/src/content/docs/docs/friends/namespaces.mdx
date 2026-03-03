@@ -1,0 +1,101 @@
+---
+title: Friend Namespaces
+description: How per-friend Kubernetes namespaces are provisioned and secured.
+---
+
+import { Aside } from '@astrojs/starlight/components';
+
+Each friend gets their own Kubernetes namespace (`friend-<name>`) with resource quotas, network policies, and pod security standards.
+
+## Provisioning
+
+Namespaces are provisioned via the controller API:
+
+```bash
+POST /api/friends/alice/namespace/provision
+# Creates: namespace, ResourceQuota, LimitRange, NetworkPolicy
+```
+
+This happens automatically when a friend is created via `POST /api/friends`, or can be triggered manually for existing friends.
+
+## Resource Quotas
+
+| Resource | Limit |
+|---|---|
+| CPU | 500m |
+| Memory | 512Mi |
+| Pods | 3 |
+| PVCs | 2 |
+
+<Aside>
+These quotas are intentionally smaller than agent quotas (4 CPU / 3Gi). Friends are expected to run lightweight workloads.
+</Aside>
+
+## Limit Range
+
+Default container limits are enforced:
+
+| | Default | Max |
+|---|---|---|
+| CPU | 100m | 500m |
+| Memory | 64Mi | 256Mi |
+
+## Network Policy
+
+Friend namespaces have strict network isolation:
+
+- **Blocked:** All cross-namespace pod-to-pod traffic
+- **Allowed:** Internet egress (for external APIs)
+- **Allowed:** Ingress from `manyclaws-system` only (controller access)
+
+This means friend workloads cannot communicate with agent pods or other friend namespaces directly.
+
+## Pod Security
+
+The `restricted` Pod Security Standard is enforced:
+
+- No privilege escalation
+- No hostPath mounts
+- No root containers
+- seccomp profile required
+- Capabilities must be dropped
+
+## Deploying Workloads
+
+Friends (or agents on their behalf) can deploy workloads to friend namespaces:
+
+```bash
+# Agent deploys to friend's namespace
+POST /api/friends/alice/namespace/apply
+[
+  {
+    "kind": "Deployment",
+    "metadata": {"name": "my-app"},
+    "spec": { ... }
+  },
+  {
+    "kind": "Service",
+    "metadata": {"name": "my-app"},
+    "spec": { ... }
+  }
+]
+```
+
+**Allowed resource kinds:** Deployment, Service, ConfigMap, Job, CronJob.
+
+## Exposing Services
+
+Services in friend namespaces can be exposed publicly via IngressRoute + DNS:
+
+```bash
+POST /api/friends/alice/namespace/expose
+{
+  "name": "my-app",
+  "service": "my-app",
+  "port": 80,
+  "domain": "your-domain.net"
+}
+# Returns: {"hostname": "my-app-alice.your-domain.net", "url": "https://my-app-alice.your-domain.net"}
+```
+
+The controller creates a Traefik IngressRoute and a Cloudflare DNS CNAME record automatically.

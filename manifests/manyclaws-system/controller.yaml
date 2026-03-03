@@ -1,0 +1,217 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: manyclaws-controller
+  namespace: manyclaws-system
+---
+# ClusterRole for the controller (needs cross-namespace access)
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: manyclaws-controller
+rules:
+# Namespace management
+- apiGroups: [""]
+  resources: ["namespaces"]
+  verbs: ["get", "list", "watch", "create", "update", "patch"]
+# Pod and service read across namespaces
+- apiGroups: [""]
+  resources: ["pods", "pods/log", "events"]
+  verbs: ["get", "list", "watch"]
+# Service and ConfigMap management (for friend deployments)
+- apiGroups: [""]
+  resources: ["services", "configmaps"]
+  verbs: ["get", "list", "watch", "create", "update", "patch"]
+# Exec into agent pods (for workspace file access)
+- apiGroups: [""]
+  resources: ["pods/exec"]
+  verbs: ["create"]
+# Secret management (for cross-namespace syncing)
+- apiGroups: [""]
+  resources: ["secrets"]
+  verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+# Deployment management
+- apiGroups: ["apps"]
+  resources: ["deployments", "replicasets"]
+  verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+# Batch jobs (for friend deployments)
+- apiGroups: ["batch"]
+  resources: ["jobs", "cronjobs"]
+  verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+# Traefik IngressRoute CRDs (for exposing friend services)
+- apiGroups: ["traefik.io"]
+  resources: ["ingressroutes"]
+  verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+# Resource quotas and limits
+- apiGroups: [""]
+  resources: ["resourcequotas", "limitranges"]
+  verbs: ["get", "list", "watch", "create", "update", "patch"]
+# Network policies
+- apiGroups: ["networking.k8s.io"]
+  resources: ["networkpolicies"]
+  verbs: ["get", "list", "watch", "create", "update", "patch"]
+# RBAC for provisioning agent/friend namespaces
+- apiGroups: ["rbac.authorization.k8s.io"]
+  resources: ["roles", "rolebindings"]
+  verbs: ["get", "list", "watch", "create", "update", "patch"]
+# Node info for cluster overview
+- apiGroups: [""]
+  resources: ["nodes"]
+  verbs: ["get", "list", "watch"]
+# PVCs
+- apiGroups: [""]
+  resources: ["persistentvolumeclaims"]
+  verbs: ["get", "list", "watch", "create"]
+# Metrics
+- apiGroups: ["metrics.k8s.io"]
+  resources: ["pods", "nodes"]
+  verbs: ["get", "list"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: manyclaws-controller
+subjects:
+- kind: ServiceAccount
+  name: manyclaws-controller
+  namespace: manyclaws-system
+roleRef:
+  kind: ClusterRole
+  name: manyclaws-controller
+  apiGroup: rbac.authorization.k8s.io
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: controller-secrets
+  namespace: manyclaws-system
+type: Opaque
+stringData:
+  ADMIN_TOKEN: "YOUR_ADMIN_TOKEN_HERE"
+  AGENT_API_TOKEN: "YOUR_AGENT_API_TOKEN_HERE"
+  CLOUDFLARE_API_TOKEN: "YOUR_CF_API_TOKEN_HERE"
+  CLOUDFLARE_TUNNEL_ID: "YOUR_TUNNEL_ID_HERE"
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: controller-data
+  namespace: manyclaws-system
+spec:
+  accessModes:
+  - ReadWriteOnce
+  resources:
+    requests:
+      storage: 500Mi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: manyclaws-controller
+  namespace: manyclaws-system
+  labels:
+    app: manyclaws-controller
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: manyclaws-controller
+  template:
+    metadata:
+      labels:
+        app: manyclaws-controller
+    spec:
+      serviceAccountName: manyclaws-controller
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+      - name: controller
+        image: ghcr.io/manyclaws/controller:latest
+        imagePullPolicy: Never
+        ports:
+        - containerPort: 3000
+          name: http
+        env:
+        - name: PORT
+          value: "3000"
+        - name: DB_PATH
+          value: "/data/manyclaws.db"
+        - name: ADMIN_TOKEN
+          valueFrom:
+            secretKeyRef:
+              name: controller-secrets
+              key: ADMIN_TOKEN
+        - name: AGENT_API_TOKEN
+          valueFrom:
+            secretKeyRef:
+              name: controller-secrets
+              key: AGENT_API_TOKEN
+        - name: CLOUDFLARE_API_TOKEN
+          valueFrom:
+            secretKeyRef:
+              name: controller-secrets
+              key: CLOUDFLARE_API_TOKEN
+        - name: CLOUDFLARE_TUNNEL_ID
+          valueFrom:
+            secretKeyRef:
+              name: controller-secrets
+              key: CLOUDFLARE_TUNNEL_ID
+        - name: BASE_DOMAIN
+          value: "your-domain.net"
+        - name: CLOUDFLARE_ZONES
+          value: "your-domain.net:YOUR_ZONE_ID_HERE"
+        - name: NODE_EXTRA_CA_CERTS
+          value: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+        volumeMounts:
+        - name: data
+          mountPath: /data
+        resources:
+          requests:
+            cpu: 50m
+            memory: 64Mi
+          limits:
+            cpu: 500m
+            memory: 256Mi
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
+        livenessProbe:
+          httpGet:
+            path: /api/health
+            port: 3000
+          initialDelaySeconds: 10
+          periodSeconds: 30
+        readinessProbe:
+          httpGet:
+            path: /api/health
+            port: 3000
+          initialDelaySeconds: 5
+          periodSeconds: 10
+      volumes:
+      - name: data
+        persistentVolumeClaim:
+          claimName: controller-data
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: manyclaws-controller
+  namespace: manyclaws-system
+  labels:
+    app: manyclaws-controller
+spec:
+  selector:
+    app: manyclaws-controller
+  ports:
+  - port: 80
+    targetPort: 3000
+    name: http

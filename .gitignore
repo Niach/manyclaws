@@ -1,0 +1,12 @@
+node_modules/
+dist/
+.astro/
+bun.lock
+*.db
+
+# Directories excluded from distribution
+portal/
+spec/
+/skills/
+AGENTS.md
+/Dockerfile

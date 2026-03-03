@@ -1,0 +1,523 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ManyClaws</title>
+  <link href="https://cdn.jsdelivr.net/npm/daisyui@4.12.14/dist/full.min.css" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    .fade-in { animation: fadeIn 0.2s ease-in; }
+    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+    .log-line { font-family: 'Courier New', monospace; font-size: 0.75rem; }
+  </style>
+</head>
+<body class="min-h-screen bg-base-200">
+  <!-- Navbar -->
+  <div class="navbar bg-base-100 shadow-lg">
+    <div class="flex-1">
+      <a class="btn btn-ghost text-xl" onclick="navigate('dashboard')">ManyClaws</a>
+    </div>
+    <div class="flex-none">
+      <ul class="menu menu-horizontal px-1">
+        <li><a onclick="navigate('dashboard')" id="nav-dashboard">Dashboard</a></li>
+        <li><a onclick="navigate('agents')" id="nav-agents">Agents</a></li>
+        <li><a onclick="navigate('friends')" id="nav-friends">Friends</a></li>
+        <li><a onclick="navigate('cluster')" id="nav-cluster">Cluster</a></li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- Main content -->
+  <div class="container mx-auto p-4 max-w-7xl" id="app">
+    <div class="flex items-center justify-center h-64">
+      <span class="loading loading-spinner loading-lg"></span>
+    </div>
+  </div>
+
+  <script>
+    const API = window.location.origin;
+    let token = new URLSearchParams(window.location.search).get('token') || localStorage.getItem('cv-token');
+    if (token) localStorage.setItem('cv-token', token);
+
+    function headers() {
+      return { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' };
+    }
+
+    async function api(path) {
+      const res = await fetch(`${API}${path}`, { headers: headers() });
+      if (res.status === 401) { showLogin(); return null; }
+      return res.json();
+    }
+
+    async function apiPost(path, body) {
+      const res = await fetch(`${API}${path}`, { method: 'POST', headers: headers(), body: JSON.stringify(body) });
+      return res.json();
+    }
+
+    async function apiPut(path, body) {
+      const res = await fetch(`${API}${path}`, { method: 'PUT', headers: headers(), body: JSON.stringify(body) });
+      return res.json();
+    }
+
+    async function apiDelete(path) {
+      const res = await fetch(`${API}${path}`, { method: 'DELETE', headers: headers() });
+      return res.json();
+    }
+
+    function showLogin() {
+      document.getElementById('app').innerHTML = `
+        <div class="flex items-center justify-center h-96">
+          <div class="card bg-base-100 shadow-xl w-96">
+            <div class="card-body">
+              <h2 class="card-title">ManyClaws Login</h2>
+              <input type="password" id="login-token" placeholder="Admin Token" class="input input-bordered w-full" />
+              <div class="card-actions justify-end mt-4">
+                <button class="btn btn-primary" onclick="doLogin()">Login</button>
+              </div>
+            </div>
+          </div>
+        </div>`;
+    }
+
+    function doLogin() {
+      token = document.getElementById('login-token').value;
+      localStorage.setItem('cv-token', token);
+      navigate('dashboard');
+    }
+
+    function setActive(page) {
+      document.querySelectorAll('.menu a').forEach(a => a.classList.remove('active'));
+      const el = document.getElementById(`nav-${page}`);
+      if (el) el.classList.add('active');
+    }
+
+    function navigate(page) {
+      setActive(page);
+      switch(page) {
+        case 'dashboard': renderDashboard(); break;
+        case 'agents': renderAgents(); break;
+        case 'friends': renderFriends(); break;
+        case 'cluster': renderCluster(); break;
+        case 'agent-detail': renderAgentDetail(arguments[1]); break;
+        case 'friend-detail': renderFriendDetail(arguments[1]); break;
+      }
+    }
+
+    // ── Dashboard ──
+    async function renderDashboard() {
+      const [health, agents, grants] = await Promise.all([
+        api('/api/health'),
+        api('/api/agents'),
+        api('/api/grants/pending')
+      ]);
+      if (!health) return;
+
+      const statusBadge = health.status === 'healthy'
+        ? '<span class="badge badge-success">Healthy</span>'
+        : '<span class="badge badge-warning">Degraded</span>';
+
+      document.getElementById('app').innerHTML = `
+        <div class="fade-in">
+          <div class="flex items-center gap-4 mb-6">
+            <h1 class="text-3xl font-bold">Dashboard</h1>
+            ${statusBadge}
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+            <div class="stat bg-base-100 rounded-box shadow">
+              <div class="stat-title">Agents</div>
+              <div class="stat-value">${agents?.length ?? 0}</div>
+              <div class="stat-desc">${agents?.filter(a => a.ready).length ?? 0} online</div>
+            </div>
+            <div class="stat bg-base-100 rounded-box shadow">
+              <div class="stat-title">Pending Grants</div>
+              <div class="stat-value">${grants?.length ?? 0}</div>
+              <div class="stat-desc">Awaiting approval</div>
+            </div>
+            <div class="stat bg-base-100 rounded-box shadow">
+              <div class="stat-title">Status</div>
+              <div class="stat-value text-lg">${health.status}</div>
+              <div class="stat-desc">${health.timestamp?.split('T')[1]?.slice(0,8) ?? ''}</div>
+            </div>
+          </div>
+
+          <h2 class="text-xl font-semibold mb-3">Agents</h2>
+          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            ${(agents || []).map(a => `
+              <div class="card bg-base-100 shadow cursor-pointer hover:shadow-lg transition-shadow" onclick="navigate('agent-detail', '${a.name}')">
+                <div class="card-body p-4">
+                  <div class="flex items-center justify-between">
+                    <h3 class="card-title text-lg">${a.name}</h3>
+                    <span class="badge ${a.ready ? 'badge-success' : 'badge-error'}">${a.status}</span>
+                  </div>
+                  <p class="text-sm opacity-70">${a.namespace}</p>
+                  <div class="flex gap-2 text-xs opacity-60 mt-1">
+                    <span>Pods: ${a.podCount}</span>
+                    <span>Restarts: ${a.restarts}</span>
+                  </div>
+                </div>
+              </div>
+            `).join('')}
+          </div>
+        </div>`;
+    }
+
+    // ── Agents ──
+    async function renderAgents() {
+      const agents = await api('/api/agents');
+      if (!agents) return;
+
+      document.getElementById('app').innerHTML = `
+        <div class="fade-in">
+          <div class="flex items-center justify-between mb-6">
+            <h1 class="text-3xl font-bold">Agents</h1>
+          </div>
+          <div class="overflow-x-auto">
+            <table class="table table-zebra bg-base-100 rounded-box shadow">
+              <thead>
+                <tr><th>Name</th><th>Namespace</th><th>Status</th><th>Pods</th><th>Restarts</th><th>Image</th><th>Actions</th></tr>
+              </thead>
+              <tbody>
+                ${agents.map(a => `
+                  <tr class="hover cursor-pointer" onclick="navigate('agent-detail', '${a.name}')">
+                    <td class="font-semibold">${a.name}</td>
+                    <td class="text-sm opacity-70">${a.namespace}</td>
+                    <td><span class="badge ${a.ready ? 'badge-success' : 'badge-error'} badge-sm">${a.status}</span></td>
+                    <td>${a.podCount}</td>
+                    <td>${a.restarts}</td>
+                    <td class="text-xs opacity-60 max-w-xs truncate">${a.image || '-'}</td>
+                    <td>
+                      <button class="btn btn-xs btn-outline" onclick="event.stopPropagation(); restartAgent('${a.name}')">Restart</button>
+                    </td>
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
+          </div>
+        </div>`;
+    }
+
+    async function restartAgent(name) {
+      if (!confirm(`Restart agent ${name}?`)) return;
+      await apiPost(`/api/agents/${name}/restart`, {});
+      setTimeout(() => navigate('agents'), 1000);
+    }
+
+    // ── Agent Detail ──
+    async function renderAgentDetail(name) {
+      const data = await api(`/api/agents/${name}`);
+      if (!data) return;
+
+      document.getElementById('app').innerHTML = `
+        <div class="fade-in">
+          <div class="flex items-center gap-2 mb-2">
+            <a class="btn btn-ghost btn-sm" onclick="navigate('agents')">&larr; Back</a>
+            <h1 class="text-3xl font-bold">${name}</h1>
+            <span class="badge ${data.ready ? 'badge-success' : 'badge-error'}">${data.status}</span>
+          </div>
+          <p class="text-sm opacity-60 mb-6">Namespace: ${data.namespace}</p>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+              <h2 class="text-xl font-semibold mb-3">Pods</h2>
+              <div class="overflow-x-auto">
+                <table class="table table-sm bg-base-100 rounded-box shadow">
+                  <thead><tr><th>Name</th><th>Status</th><th>Restarts</th><th>Age</th></tr></thead>
+                  <tbody>
+                    ${(data.pods || []).map(p => `
+                      <tr>
+                        <td class="text-xs">${p.name}</td>
+                        <td><span class="badge badge-sm ${p.ready ? 'badge-success' : 'badge-warning'}">${p.status}</span></td>
+                        <td>${p.restarts}</td>
+                        <td class="text-xs">${p.age?.split('T')[0] ?? '-'}</td>
+                      </tr>
+                    `).join('')}
+                  </tbody>
+                </table>
+              </div>
+
+              ${data.quota ? `
+              <h2 class="text-xl font-semibold mb-3 mt-6">Resource Quota</h2>
+              <div class="bg-base-100 rounded-box shadow p-4">
+                <table class="table table-sm">
+                  <thead><tr><th>Resource</th><th>Used</th><th>Hard Limit</th></tr></thead>
+                  <tbody>
+                    ${Object.keys(data.quota.hard || {}).map(k => `
+                      <tr>
+                        <td>${k}</td>
+                        <td>${data.quota.used?.[k] ?? '0'}</td>
+                        <td>${data.quota.hard[k]}</td>
+                      </tr>
+                    `).join('')}
+                  </tbody>
+                </table>
+              </div>` : ''}
+            </div>
+
+            <div>
+              <h2 class="text-xl font-semibold mb-3">Logs</h2>
+              <div class="bg-base-300 rounded-box p-3 h-96 overflow-y-auto" id="log-container">
+                <div class="flex items-center justify-center h-full">
+                  <span class="loading loading-spinner"></span>
+                </div>
+              </div>
+              <button class="btn btn-sm btn-outline mt-2" onclick="loadLogs('${name}')">Refresh Logs</button>
+            </div>
+          </div>
+
+          <div class="mt-6 flex gap-2">
+            <button class="btn btn-warning btn-sm" onclick="restartAgent('${name}')">Restart Agent</button>
+          </div>
+        </div>`;
+
+      loadLogs(name);
+    }
+
+    async function loadLogs(name) {
+      const container = document.getElementById('log-container');
+      try {
+        const res = await fetch(`${API}/api/agents/${name}/logs`, { headers: headers() });
+        const text = await res.text();
+        const lines = text.split('\n').filter(l => l.startsWith('data: ')).map(l => {
+          try { return JSON.parse(l.slice(6)).line; } catch { return ''; }
+        }).filter(Boolean);
+        container.innerHTML = lines.map(l => `<div class="log-line py-0.5 border-b border-base-200">${escapeHtml(l)}</div>`).join('');
+        container.scrollTop = container.scrollHeight;
+      } catch (err) {
+        container.innerHTML = `<div class="text-error">Failed to load logs: ${err.message}</div>`;
+      }
+    }
+
+    // ── Friends ──
+    async function renderFriends() {
+      const friends = await api('/api/friends');
+      if (!friends) return;
+
+      document.getElementById('app').innerHTML = `
+        <div class="fade-in">
+          <div class="flex items-center justify-between mb-6">
+            <h1 class="text-3xl font-bold">Friends</h1>
+            <button class="btn btn-primary btn-sm" onclick="showCreateFriend()">+ Add Friend</button>
+          </div>
+          <div id="friend-modal"></div>
+          <div class="overflow-x-auto">
+            <table class="table table-zebra bg-base-100 rounded-box shadow">
+              <thead><tr><th>Name</th><th>Display Name</th><th>Discord</th><th>Signal</th><th>WhatsApp</th><th>Namespace</th></tr></thead>
+              <tbody>
+                ${friends.map(f => `
+                  <tr class="hover cursor-pointer" onclick="navigate('friend-detail', '${f.id}')">
+                    <td class="font-semibold">${f.id}</td>
+                    <td>${f.display_name}</td>
+                    <td class="text-xs">${f.discord_id || '-'}</td>
+                    <td class="text-xs">${f.signal_uuid?.slice(0,8) || '-'}...</td>
+                    <td class="text-xs">${f.whatsapp_id || '-'}</td>
+                    <td class="text-sm opacity-70">${f.namespace}</td>
+                  </tr>
+                `).join('') || '<tr><td colspan="6" class="text-center opacity-50">No friends yet</td></tr>'}
+              </tbody>
+            </table>
+          </div>
+        </div>`;
+    }
+
+    function showCreateFriend() {
+      document.getElementById('friend-modal').innerHTML = `
+        <div class="modal modal-open">
+          <div class="modal-box">
+            <h3 class="font-bold text-lg">Add Friend</h3>
+            <div class="form-control mt-4">
+              <label class="label"><span class="label-text">ID (slug)</span></label>
+              <input type="text" id="nf-id" class="input input-bordered" placeholder="danny" />
+            </div>
+            <div class="form-control mt-2">
+              <label class="label"><span class="label-text">Display Name</span></label>
+              <input type="text" id="nf-name" class="input input-bordered" placeholder="Danny" />
+            </div>
+            <div class="form-control mt-2">
+              <label class="label"><span class="label-text">Discord ID</span></label>
+              <input type="text" id="nf-discord" class="input input-bordered" placeholder="209682718823415810" />
+            </div>
+            <div class="form-control mt-2">
+              <label class="label"><span class="label-text">Signal UUID</span></label>
+              <input type="text" id="nf-signal" class="input input-bordered" placeholder="54c64714-..." />
+            </div>
+            <div class="form-control mt-2">
+              <label class="label"><span class="label-text">WhatsApp ID</span></label>
+              <input type="text" id="nf-whatsapp" class="input input-bordered" placeholder="+4917634319581" />
+            </div>
+            <div class="modal-action">
+              <button class="btn" onclick="document.getElementById('friend-modal').innerHTML=''">Cancel</button>
+              <button class="btn btn-primary" onclick="createFriend()">Create</button>
+            </div>
+          </div>
+        </div>`;
+    }
+
+    async function createFriend() {
+      const body = {
+        id: document.getElementById('nf-id').value,
+        display_name: document.getElementById('nf-name').value,
+        discord_id: document.getElementById('nf-discord').value || undefined,
+        signal_uuid: document.getElementById('nf-signal').value || undefined,
+        whatsapp_id: document.getElementById('nf-whatsapp').value || undefined,
+      };
+      await apiPost('/api/friends', body);
+      navigate('friends');
+    }
+
+    // ── Friend Detail ──
+    async function renderFriendDetail(id) {
+      const [friend, memories, grants, secrets] = await Promise.all([
+        api(`/api/friends/${id}`),
+        api(`/api/friends/${id}/memories`),
+        api(`/api/friends/${id}/grants`),
+        api(`/api/friends/${id}/secrets`)
+      ]);
+      if (!friend) return;
+
+      document.getElementById('app').innerHTML = `
+        <div class="fade-in">
+          <div class="flex items-center gap-2 mb-2">
+            <a class="btn btn-ghost btn-sm" onclick="navigate('friends')">&larr; Back</a>
+            <h1 class="text-3xl font-bold">${friend.display_name}</h1>
+          </div>
+          <p class="text-sm opacity-60 mb-6">ID: ${friend.id} | Namespace: ${friend.namespace}</p>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+              <h2 class="text-xl font-semibold mb-3">Linked Accounts</h2>
+              <div class="bg-base-100 rounded-box shadow p-4">
+                <div class="flex flex-col gap-2">
+                  <div><span class="font-semibold">Discord:</span> ${friend.discord_id || 'Not linked'}</div>
+                  <div><span class="font-semibold">Signal:</span> ${friend.signal_uuid || 'Not linked'}</div>
+                  <div><span class="font-semibold">WhatsApp:</span> ${friend.whatsapp_id || 'Not linked'}</div>
+                  <div><span class="font-semibold">Preferred:</span> ${friend.preferred_channel || 'Not set'}</div>
+                </div>
+              </div>
+
+              <h2 class="text-xl font-semibold mb-3 mt-6">Agent Relationships</h2>
+              <div class="bg-base-100 rounded-box shadow p-4">
+                ${(friend.friendships || []).length ? friend.friendships.map(f => `
+                  <div class="flex justify-between items-center py-1">
+                    <span>${f.agent_id}</span>
+                    <span class="badge badge-sm ${f.status === 'active' ? 'badge-success' : 'badge-warning'}">${f.status}</span>
+                  </div>
+                `).join('') : '<p class="opacity-50">No agent relationships</p>'}
+              </div>
+
+              <h2 class="text-xl font-semibold mb-3 mt-6">Secrets</h2>
+              <div class="bg-base-100 rounded-box shadow p-4">
+                ${(secrets || []).length ? secrets.map(s => `
+                  <div class="flex justify-between items-center py-1">
+                    <span class="font-mono text-sm">${s.name}</span>
+                    <span class="text-xs opacity-60">${s.keys.length} keys</span>
+                  </div>
+                `).join('') : '<p class="opacity-50">No secrets</p>'}
+              </div>
+            </div>
+
+            <div>
+              <h2 class="text-xl font-semibold mb-3">Memories</h2>
+              <div class="bg-base-100 rounded-box shadow p-4 max-h-64 overflow-y-auto">
+                ${(memories || []).length ? memories.map(m => `
+                  <div class="py-2 border-b border-base-200 last:border-0">
+                    <p class="text-sm">${escapeHtml(m.content)}</p>
+                    <div class="flex gap-2 text-xs opacity-50 mt-1">
+                      <span>${m.scope}</span>
+                      ${m.source_agent ? `<span>from: ${m.source_agent}</span>` : ''}
+                      <span>${m.created_at}</span>
+                      <button class="link link-error" onclick="deleteMemory('${id}', '${m.id}')">delete</button>
+                    </div>
+                  </div>
+                `).join('') : '<p class="opacity-50">No memories yet</p>'}
+              </div>
+
+              <h2 class="text-xl font-semibold mb-3 mt-6">Permission Grants</h2>
+              <div class="bg-base-100 rounded-box shadow p-4 max-h-64 overflow-y-auto">
+                ${(grants || []).length ? grants.map(g => `
+                  <div class="py-2 border-b border-base-200 last:border-0">
+                    <div class="flex justify-between items-center">
+                      <span class="text-sm font-semibold">${g.permission}${g.secret_name ? `: ${g.secret_name}` : ''}</span>
+                      <span class="badge badge-sm ${g.status === 'approved' ? 'badge-success' : g.status === 'pending' ? 'badge-warning' : g.status === 'denied' ? 'badge-error' : 'badge-ghost'}">${g.status}</span>
+                    </div>
+                    <div class="text-xs opacity-50">Agent: ${g.agent_id} | By: ${g.requested_by}</div>
+                    ${g.status === 'pending' ? `
+                      <div class="flex gap-2 mt-1">
+                        <button class="btn btn-xs btn-success" onclick="resolveGrant('${id}', '${g.id}', 'approved')">Approve</button>
+                        <button class="btn btn-xs btn-error" onclick="resolveGrant('${id}', '${g.id}', 'denied')">Deny</button>
+                      </div>
+                    ` : g.status === 'approved' ? `
+                      <button class="btn btn-xs btn-outline btn-error mt-1" onclick="resolveGrant('${id}', '${g.id}', 'revoked')">Revoke</button>
+                    ` : ''}
+                  </div>
+                `).join('') : '<p class="opacity-50">No grants</p>'}
+              </div>
+            </div>
+          </div>
+        </div>`;
+    }
+
+    async function deleteMemory(friendId, memoryId) {
+      if (!confirm('Delete this memory?')) return;
+      await apiDelete(`/api/friends/${friendId}/memories/${memoryId}`);
+      navigate('friend-detail', friendId);
+    }
+
+    async function resolveGrant(friendId, grantId, status) {
+      await apiPut(`/api/friends/${friendId}/grants/${grantId}`, { status });
+      navigate('friend-detail', friendId);
+    }
+
+    // ── Cluster ──
+    async function renderCluster() {
+      const cluster = await api('/api/cluster');
+      if (!cluster) return;
+
+      document.getElementById('app').innerHTML = `
+        <div class="fade-in">
+          <h1 class="text-3xl font-bold mb-6">Cluster</h1>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div class="card bg-base-100 shadow">
+              <div class="card-body">
+                <h2 class="card-title">Node Info</h2>
+                <div class="flex flex-col gap-1">
+                  <div><span class="font-semibold">Name:</span> ${cluster.name}</div>
+                  <div><span class="font-semibold">Version:</span> ${cluster.version}</div>
+                  <div><span class="font-semibold">OS:</span> ${cluster.os}</div>
+                  <div><span class="font-semibold">CPU:</span> ${cluster.cpu}</div>
+                  <div><span class="font-semibold">Memory:</span> ${cluster.memory}</div>
+                  <div><span class="font-semibold">Max Pods:</span> ${cluster.pods}</div>
+                </div>
+              </div>
+            </div>
+            <div class="card bg-base-100 shadow">
+              <div class="card-body">
+                <h2 class="card-title">Conditions</h2>
+                ${(cluster.conditions || []).map(c => `
+                  <div class="flex justify-between items-center py-1">
+                    <span>${c.type}</span>
+                    <span class="badge ${c.type === 'Ready' ? (c.status === 'True' ? 'badge-success' : 'badge-error') : (c.status === 'False' ? 'badge-success' : 'badge-warning')}">${c.status}</span>
+                  </div>
+                `).join('')}
+              </div>
+            </div>
+          </div>
+        </div>`;
+    }
+
+    function escapeHtml(str) {
+      const div = document.createElement('div');
+      div.textContent = str;
+      return div.innerHTML;
+    }
+
+    // Init
+    if (token) {
+      navigate('dashboard');
+    } else {
+      showLogin();
+    }
+  </script>
+</body>
+</html>

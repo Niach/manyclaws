@@ -1,0 +1,137 @@
+---
+title: Installation Guide
+description: Install ManyClaws on any Kubernetes cluster.
+---
+
+import { Aside, Steps } from '@astrojs/starlight/components';
+
+ManyClaws runs on any Kubernetes cluster. This guide walks you through a fresh install using k3s, but any conformant cluster works.
+
+## Prerequisites
+
+- **Kubernetes cluster** — k3s (recommended), k8s, or any managed Kubernetes
+- **kubectl** — configured to talk to your cluster
+- **A domain** — with DNS managed by Cloudflare (for tunnel + zero-trust access)
+- **Cloudflare account** — free tier is sufficient
+- **Container runtime** — for building the agent image (Docker or containerd)
+
+<Aside>
+k3s is recommended because it bundles Traefik as the ingress controller and uses minimal resources (~160 MB for the control plane).
+</Aside>
+
+## Quick Start
+
+<Steps>
+
+1. **Install k3s** (if you don't already have a cluster):
+
+    ```bash
+    curl -sfL https://get.k3s.io | sh -
+    export KUBECONFIG=/etc/rancher/k3s/k3s.yaml
+    ```
+
+2. **Clone the ManyClaws repo:**
+
+    ```bash
+    git clone https://github.com/niach/manyclaws.git
+    cd manyclaws
+    ```
+
+3. **Create the system namespace and secrets:**
+
+    ```bash
+    kubectl create namespace manyclaws-system
+
+    kubectl create secret generic controller-secrets \
+      -n manyclaws-system \
+      --from-literal=ADMIN_TOKEN="$(openssl rand -hex 32)" \
+      --from-literal=AGENT_API_TOKEN="$(openssl rand -hex 32)"
+    ```
+
+4. **Set up Cloudflare Tunnel:**
+
+    Create a tunnel in the Cloudflare dashboard, then deploy cloudflared:
+
+    ```bash
+    kubectl create secret generic cloudflared-credentials \
+      -n manyclaws-system \
+      --from-file=credentials.json=<path-to-tunnel-credentials>
+
+    kubectl apply -f manifests/manyclaws-system/cloudflared.yaml
+    ```
+
+5. **Deploy the controller:**
+
+    ```bash
+    kubectl apply -f manifests/manyclaws-system/
+    ```
+
+6. **Create your first agent:**
+
+    ```bash
+    kubectl create namespace agent-my-agent
+    kubectl apply -f manifests/agent-template/
+    ```
+
+</Steps>
+
+## Configuration
+
+### Cloudflare Tunnel
+
+Point your tunnel ingress rules at Traefik:
+
+```json
+{
+  "ingress": [
+    {"hostname": "yourdomain.net", "service": "http://traefik.kube-system.svc.cluster.local:80"},
+    {"hostname": "*.yourdomain.net", "service": "http://traefik.kube-system.svc.cluster.local:80"},
+    {"service": "http_status:404"}
+  ]
+}
+```
+
+### Domain Setup
+
+Create IngressRoute CRDs to route traffic from Traefik to your services. See the manifests in `manifests/manyclaws-system/ingress.yaml` for examples.
+
+### Cloudflare Access (Zero-Trust)
+
+Set up Cloudflare Access applications to protect your routes:
+
+1. Create an Access application for your root domain
+2. Create a wildcard application for `*.yourdomain.net`
+3. Add bypass rules for any public paths (e.g., friend portal)
+
+## What You Get
+
+After installation, your cluster will have:
+
+| Namespace | Contents |
+|---|---|
+| `kube-system` | k3s internals, Traefik ingress controller |
+| `manyclaws-system` | Controller, cloudflared tunnel, shared middlewares |
+| `agent-<name>` | One namespace per agent (RBAC, NetworkPolicy, quotas) |
+| `friend-<name>` | Auto-provisioned per friend (via controller API) |
+
+### Per-Agent Namespace Includes
+
+- **RBAC** — ServiceAccount with namespace-scoped admin
+- **NetworkPolicy** — No cross-namespace traffic, internet egress allowed
+- **ResourceQuota** — 4 CPU / 3 GB RAM / 10 pods
+- **Pod Security** — `restricted` profile enforced
+
+### Resource Requirements
+
+| Agents | Recommended RAM |
+|---|---|
+| 1-4 | 8 GB |
+| 5-8 | 16 GB |
+| 10+ | 32 GB |
+
+The controller and tunnel together use ~100 MB. Each agent uses ~520 MB.
+
+## Next Steps
+
+- [Friends System](/docs/friends/overview/) — Set up friend onboarding
+- [API Reference](/docs/api/overview/) — Controller API docs

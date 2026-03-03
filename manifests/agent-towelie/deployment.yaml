@@ -1,0 +1,116 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: openclaw-gateway
+  namespace: agent-towelie
+  labels:
+    app: openclaw-gateway
+    manyclaws.io/agent: towelie
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: openclaw-gateway
+  template:
+    metadata:
+      labels:
+        app: openclaw-gateway
+        manyclaws.io/agent: towelie
+    spec:
+      serviceAccountName: agent-deployer
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+      - name: gateway
+        image: ghcr.io/manyclaws/agent:latest
+        imagePullPolicy: Never
+        ports:
+        - containerPort: 18789
+          name: gateway
+        env:
+        - name: NODE_ENV
+          value: production
+        - name: OPENCLAW_DISABLE_BONJOUR
+          value: "1"
+        - name: OPENCLAW_VERBOSE
+          value: "1"
+        - name: OPENCLAW_GATEWAY_TOKEN
+          valueFrom:
+            secretKeyRef:
+              name: agent-secrets
+              key: OPENCLAW_GATEWAY_TOKEN
+        - name: MANYCLAWS_NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
+        - name: MANYCLAWS_API_TOKEN
+          valueFrom:
+            secretKeyRef:
+              name: agent-secrets
+              key: MANYCLAWS_API_TOKEN
+        volumeMounts:
+        - name: openclaw-data
+          mountPath: /home/node/.openclaw
+        - name: workspace
+          mountPath: /home/node/workspace
+        - name: local-data
+          mountPath: /home/node/.local
+        resources:
+          requests:
+            cpu: 500m
+            memory: 512Mi
+          limits:
+            cpu: "2"
+            memory: 2Gi
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: 18789
+          initialDelaySeconds: 30
+          periodSeconds: 30
+          timeoutSeconds: 5
+          failureThreshold: 5
+        readinessProbe:
+          httpGet:
+            path: /readyz
+            port: 18789
+          initialDelaySeconds: 15
+          periodSeconds: 10
+          timeoutSeconds: 5
+      volumes:
+      - name: openclaw-data
+        persistentVolumeClaim:
+          claimName: openclaw-data
+      - name: workspace
+        persistentVolumeClaim:
+          claimName: workspace
+      - name: local-data
+        persistentVolumeClaim:
+          claimName: local-data
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: openclaw-gateway
+  namespace: agent-towelie
+  labels:
+    app: openclaw-gateway
+spec:
+  selector:
+    app: openclaw-gateway
+  ports:
+  - port: 18789
+    targetPort: 18789
+    name: gateway

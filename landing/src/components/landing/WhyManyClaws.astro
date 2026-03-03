@@ -1,0 +1,56 @@
+---
+---
+<section id="platform" class="py-24 px-6">
+  <div class="max-w-6xl mx-auto">
+    <div class="text-center mb-16 fade-in">
+      <h2 class="text-3xl sm:text-4xl font-bold text-white">
+        Built for <span style="color: #06B6D4;">real clusters.</span>
+      </h2>
+      <p class="mt-4 text-gray-400 max-w-xl mx-auto">
+        Not a demo. Not a toy. Designed for clusters you actually care about.
+      </p>
+    </div>
+
+    <div class="grid lg:grid-cols-2 gap-8 fade-in">
+      <!-- Left: What you get -->
+      <div class="space-y-4">
+        <div class="glass p-5 rounded-xl" style="border-left: 3px solid #8B5CF6;">
+          <h4 class="text-white font-semibold text-sm">Per-agent namespaces</h4>
+          <p class="text-xs text-gray-400 mt-1">RBAC, NetworkPolicy, ResourceQuota, Pod Security. Each agent is fully sandboxed in its own namespace.</p>
+        </div>
+        <div class="glass p-5 rounded-xl" style="border-left: 3px solid #EC4899;">
+          <h4 class="text-white font-semibold text-sm">Friend portal</h4>
+          <p class="text-xs text-gray-400 mt-1">Magic-link login, personal secrets, deployment dashboard, editable memory. No passwords.</p>
+        </div>
+        <div class="glass p-5 rounded-xl" style="border-left: 3px solid #10B981;">
+          <h4 class="text-white font-semibold text-sm">Agent self-deployment</h4>
+          <p class="text-xs text-gray-400 mt-1">Agents use kubectl to deploy within their namespace sandbox. Deployments, services, jobs. No Docker socket.</p>
+        </div>
+        <div class="glass p-5 rounded-xl" style="border-left: 3px solid #06B6D4;">
+          <h4 class="text-white font-semibold text-sm">Single-box friendly</h4>
+          <p class="text-xs text-gray-400 mt-1">5-8 agents on 15 GB RAM. k3s recommended. Cloudflare Tunnel for zero-trust ingress. One VPS is enough.</p>
+        </div>
+      </div>
+
+      <!-- Right: Security summary -->
+      <div class="glass p-8 rounded-2xl glow-cyan flex flex-col justify-center">
+        <h3 class="text-white font-bold text-lg mb-4">7 layers of isolation</h3>
+        <p class="text-gray-400 text-sm leading-relaxed mb-4">
+          Your cluster. Your friends' data. Seven layers stand between them.
+        </p>
+        <div class="font-mono text-xs space-y-1.5" style="color: #67E8F9;">
+          <div>1. Cloudflare Access <span class="text-gray-600">&mdash; zero-trust auth</span></div>
+          <div>2. NetworkPolicy <span class="text-gray-600">&mdash; namespace isolation</span></div>
+          <div>3. RBAC <span class="text-gray-600">&mdash; scoped service accounts</span></div>
+          <div>4. Pod Security <span class="text-gray-600">&mdash; restricted profile</span></div>
+          <div>5. ResourceQuota <span class="text-gray-600">&mdash; no resource exhaustion</span></div>
+          <div>6. Kubernetes Secrets <span class="text-gray-600">&mdash; per-namespace, read-only</span></div>
+          <div>7. Container hardening <span class="text-gray-600">&mdash; non-root, seccomp</span></div>
+        </div>
+        <p class="text-gray-500 text-xs mt-4">
+          No Docker socket. No shared secrets. No trust assumptions.
+        </p>
+      </div>
+    </div>
+  </div>
+</section>

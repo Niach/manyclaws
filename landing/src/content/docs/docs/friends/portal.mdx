@@ -1,0 +1,68 @@
+---
+title: Friend Portal
+description: The self-service web portal where friends manage their secrets, memory, and namespace.
+---
+
+import { Aside } from '@astrojs/starlight/components';
+
+The Friend Portal is a web UI at `https://<agent>.your-domain.net/portal` where friends manage their relationship with agents.
+
+## Magic Link Authentication
+
+The portal uses magic-link auth — no passwords, no accounts to create.
+
+### Flow
+
+1. **Agent generates a link** — calls `POST /api/auth/portal-session` with the friend's ID
+2. **Agent sends the link** — via the friend's current channel
+3. **Friend clicks** — gets a 30-day session token stored in `localStorage`
+4. **Authenticated** — all subsequent `/api/portal/*` requests include the token as `Authorization: Bearer`
+
+```
+Agent → POST /api/auth/portal-session {friend_id: "alice"}
+     ← {portal_url: "https://my-agent.your-domain.net/portal?s=abc123...", session_token: "abc123..."}
+
+Agent → sends portal_url to friend via their preferred channel
+
+Friend → clicks link → portal loads → stores session in localStorage
+```
+
+<Aside>
+Sessions are stored in the `sessions` SQLite table and persist across controller restarts. They expire after 30 days.
+</Aside>
+
+## Portal Features
+
+### Memory Management
+- View the agent's notes about you (read-only)
+- Edit your own `MEMORY.md` file (persists across sessions)
+- The agent reads this file when interacting with you
+
+### Secret Management
+- Create, view, update, and delete secrets in your `friend-<name>` namespace
+- Secrets are stored as Kubernetes Secrets (base64-encoded)
+- Used for API keys, credentials, and other sensitive data
+
+### Namespace Overview
+- View pods, services, and deployments in your namespace
+- Monitor resource quota usage
+- View exposed services and their URLs
+
+### Cron Jobs
+- View scheduled tasks that target your sessions
+- Create, enable/disable, delete, and manually trigger cron jobs
+
+## Portal API
+
+All portal endpoints require a valid friend session token:
+
+| Method | Path | Description |
+|---|---|---|
+| `GET` | `/api/portal/me` | Friend profile + stats |
+| `GET/POST/DELETE` | `/api/portal/secrets` | Secret CRUD |
+| `GET/PUT/DELETE` | `/api/portal/secrets/:name` | Individual secret operations |
+| `GET` | `/api/portal/agents` | Agent relationships |
+| `GET` | `/api/portal/namespace` | Pods, services, deployments, quota |
+| `GET/PUT` | `/api/portal/workspace/memory` | Friend's editable MEMORY.md |
+| `GET` | `/api/portal/workspace/friend-notes` | Agent's notes (read-only) |
+| `GET/POST/DELETE` | `/api/portal/workspace/crons` | Cron job management |
