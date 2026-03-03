@@ -1,0 +1,12 @@
+---
+interface Props {
+  action: string;
+}
+
+const { action } = Astro.props;
+---
+
+<div class="chat-action">
+  <div class="chat-action-icon">⚡</div>
+  <div class="chat-action-text">{action}</div>
+</div>

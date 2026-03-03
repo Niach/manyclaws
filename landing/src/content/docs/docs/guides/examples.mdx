@@ -4,31 +4,41 @@ description: Real-world example conversations showing how agents, friends, and t
 ---
 
 import { Aside } from '@astrojs/starlight/components';
+import ChatWindow from '@components/docs/ChatWindow.astro';
+import ChatMessage from '@components/docs/ChatMessage.astro';
+import ChatAction from '@components/docs/ChatAction.astro';
 
 These examples show typical interactions between friends and ManyClaws agents. The agent handles Kubernetes orchestration behind the scenes while friends interact through natural conversation.
 
 ## Vibe-Coding: Friend asks agent to build something
 
-```
-Friend (alice): Hey, can you build me a simple todo app?
+<ChatWindow title="Signal DM — alice">
+  <ChatMessage from="friend" name="Alice">
+    Hey, can you build me a simple todo app?
+  </ChatMessage>
 
-Agent: Klar! I'll spin up a todo app for you. Let me check your namespace first...
+  <ChatMessage from="agent" name="Agent">
+    Klar! I'll spin up a todo app for you. Let me check your namespace first...
+  </ChatMessage>
 
-Agent: [runs: GET /api/friends/alice/namespace/status]
-       Your namespace is healthy — 0/3 pods used, plenty of room.
-       I'll deploy a Node.js todo app with persistent storage.
+  <ChatAction action="GET /api/friends/alice/namespace/status" />
 
-Agent: [runs: POST /api/friends/alice/namespace/apply]
-       [deploys Deployment + Service for todo-app]
+  <ChatMessage from="agent" name="Agent">
+    Your namespace is healthy — 0/3 pods used, plenty of room. I'll deploy a Node.js todo app with persistent storage.
+  </ChatMessage>
 
-Agent: App is running! Let me expose it so you can reach it from the internet.
+  <ChatAction action="POST /api/friends/alice/namespace/apply → Deployment + Service" />
 
-Agent: [runs: POST /api/friends/alice/namespace/expose]
-       {"name": "todo", "service": "todo-app", "port": 3000}
+  <ChatMessage from="agent" name="Agent">
+    App is running! Let me expose it so you can reach it from the internet.
+  </ChatMessage>
 
-Agent: Done! Your todo app is live at https://todo-alice.your-domain.net
-       It's a simple web UI — just open the link and start adding tasks.
-```
+  <ChatAction action="POST /api/friends/alice/namespace/expose → todo-alice.your-domain.net" />
+
+  <ChatMessage from="agent" name="Agent">
+    Done! Your todo app is live at `https://todo-alice.your-domain.net` — just open the link and start adding tasks.
+  </ChatMessage>
+</ChatWindow>
 
 <Aside type="tip">
 The agent deploys to the friend's isolated `friend-alice` namespace, not its own. Resource quotas and network policies protect the cluster.
@@ -36,33 +46,35 @@ The agent deploys to the friend's isolated `friend-alice` namespace, not its own
 
 ## Portal Access: Friend manages secrets
 
-```
-Friend (bob): I need to store my OpenAI API key somewhere safe.
-              Can your apps use it?
+<ChatWindow title="Discord DM — bob">
+  <ChatMessage from="friend" name="Bob">
+    I need to store my OpenAI API key somewhere safe. Can your apps use it?
+  </ChatMessage>
 
-Agent: I'll send you a portal login link — you can manage secrets
-       securely from there. One moment...
+  <ChatMessage from="agent" name="Agent">
+    I'll send you a portal login link — you can manage secrets securely from there. One moment...
+  </ChatMessage>
 
-Agent: [runs: POST /api/auth/portal-session {"friend_id": "bob"}]
+  <ChatAction action="POST /api/auth/portal-session → creates 30-day session" />
 
-Agent: Here's your portal link:
-       https://my-agent.your-domain.net/portal?s=abc123...
+  <ChatMessage from="agent" name="Agent">
+    <p>Here's your portal link:</p>
+    <p><code>https://my-agent.your-domain.net/portal?s=abc123...</code></p>
+    <p>Click it to access your personal dashboard. Under the "Secrets" tab you can add your OpenAI key. The link is valid for 30 days.</p>
+  </ChatMessage>
+</ChatWindow>
 
-       Click it to access your personal dashboard. Under the
-       "Secrets" tab you can add your OpenAI key. The link is
-       valid for 30 days.
+<ChatWindow title="Friend Portal — bob">
+  <ChatAction action="Bob opens portal → Secrets tab → New Secret" />
 
-       Once you store the key, any app I deploy to your namespace
-       can reference it.
-```
+  <ChatMessage from="friend" name="Bob">
+    <p><strong>Secret name:</strong> <code>openai-key</code></p>
+    <p><strong>Key:</strong> <code>OPENAI_API_KEY</code></p>
+    <p><strong>Value:</strong> <code>sk-...</code></p>
+  </ChatMessage>
 
-```
-[Bob opens the portal, clicks "Secrets", creates a new secret:]
-
-Secret name: openai-key
-Key:         OPENAI_API_KEY
-Value:       sk-...
-```
+  <ChatAction action="Secret created in friend-bob namespace" />
+</ChatWindow>
 
 <Aside>
 Secrets are stored as Kubernetes Secrets in the friend's own namespace. Only workloads in that namespace can access them.
@@ -70,93 +82,93 @@ Secrets are stored as Kubernetes Secrets in the friend's own namespace. Only wor
 
 ## Adding Infrastructure: Friend extends their app
 
-```
-Friend (alice): My todo app needs a database. Can you add Postgres?
+<ChatWindow title="Signal DM — alice">
+  <ChatMessage from="friend" name="Alice">
+    My todo app needs a database. Can you add Postgres?
+  </ChatMessage>
 
-Agent: Sure! I'll deploy Postgres to your namespace and wire it up.
+  <ChatMessage from="agent" name="Agent">
+    Sure! I'll deploy Postgres to your namespace and wire it up.
+  </ChatMessage>
 
-Agent: [runs: POST /api/friends/alice/namespace/apply]
-       [deploys postgres Deployment + Service + PVC]
+  <ChatAction action="POST /api/friends/alice/namespace/apply → Postgres Deployment + Service + PVC" />
+  <ChatAction action="POST /api/friends/alice/namespace/apply → Update todo-app with DATABASE_URL" />
 
-Agent: [runs: POST /api/friends/alice/namespace/apply]
-       [updates todo-app Deployment with DATABASE_URL env var
-        pointing to postgres.friend-alice.svc:5432]
+  <ChatMessage from="agent" name="Agent">
+    <p>Postgres is running in your namespace with 256Mi storage. I've updated the todo app to connect to it automatically.</p>
+    <p>Your app is still live at `https://todo-alice.your-domain.net` — want me to add anything else? Maybe a backup cron job?</p>
+  </ChatMessage>
 
-Agent: Postgres is running in your namespace with 256Mi storage.
-       I've updated the todo app to connect to it automatically.
+  <ChatMessage from="friend" name="Alice">
+    Yeah, back it up daily at 3am.
+  </ChatMessage>
 
-       Your app is still live at https://todo-alice.your-domain.net
-       Want me to add anything else? Maybe a backup cron job?
-```
+  <ChatAction action="POST /api/friends/alice/namespace/apply → CronJob pg_dump at 0 3 * * *" />
 
-```
-Friend (alice): Yeah, back it up daily at 3am.
-
-Agent: [runs: POST /api/friends/alice/namespace/apply]
-       [deploys CronJob: pg_dump at "0 3 * * *"]
-
-Agent: Done! A daily Postgres backup runs at 3:00 AM.
-       The dump is stored in a PVC in your namespace.
-```
+  <ChatMessage from="agent" name="Agent">
+    Done! A daily Postgres backup runs at 3:00 AM. The dump is stored in a PVC in your namespace.
+  </ChatMessage>
+</ChatWindow>
 
 ## Checking Status: Friend monitors their namespace
 
-```
-Friend (alice): What's running in my namespace right now?
+<ChatWindow title="WhatsApp DM — alice">
+  <ChatMessage from="friend" name="Alice">
+    What's running in my namespace right now?
+  </ChatMessage>
 
-Agent: [runs: GET /api/friends/alice/namespace/status]
+  <ChatAction action="GET /api/friends/alice/namespace/status" />
 
-Agent: Here's your namespace overview:
-
-       Pods (3/3 quota):
-       - todo-app-7d8f9b-x4k2m    Running  (128Mi)
-       - postgres-5c6d7e-n3p1q    Running  (192Mi)
-       - pg-backup-28473892-abc    Completed
-
-       Services:
-       - todo-app    ClusterIP  :3000
-       - postgres    ClusterIP  :5432
-
-       Exposed:
-       - https://todo-alice.your-domain.net → todo-app:3000
-
-       Quota: 300m/500m CPU, 384Mi/512Mi RAM
-
-       Everything looks healthy!
-```
+  <ChatMessage from="agent" name="Agent">
+    <p>Here's your namespace overview:</p>
+    <p><strong>Pods (3/3 quota):</strong></p>
+    <p><code>todo-app-7d8f9b</code> Running (128Mi)<br />
+    <code>postgres-5c6d7e</code> Running (192Mi)<br />
+    <code>pg-backup-28473892</code> Completed</p>
+    <p><strong>Services:</strong> todo-app :3000, postgres :5432</p>
+    <p><strong>Exposed:</strong> <code>todo-alice.your-domain.net</code> → todo-app:3000</p>
+    <p><strong>Quota:</strong> 300m/500m CPU, 384Mi/512Mi RAM</p>
+    <p>Everything looks healthy!</p>
+  </ChatMessage>
+</ChatWindow>
 
 ## Cron Jobs: Friend sets up scheduled tasks
 
-```
-Friend (bob): Can you remind me every morning at 9am to check
-              my portfolio?
+<ChatWindow title="Signal DM — bob">
+  <ChatMessage from="friend" name="Bob">
+    Can you remind me every morning at 9am to check my portfolio?
+  </ChatMessage>
 
-Agent: I'll set up a cron job for that.
+  <ChatAction action="Creates workspace cron → 0 9 * * * Europe/Berlin" />
 
-[Agent creates a cron via the workspace cron system]
-
-Agent: Done! Every day at 9:00 AM (Europe/Berlin), I'll send you
-       a message to check your portfolio. You can manage this in
-       your portal under "Cron Jobs" — pause, edit, or delete it
-       anytime.
-```
+  <ChatMessage from="agent" name="Agent">
+    Done! Every day at 9:00 AM (Europe/Berlin), I'll send you a message to check your portfolio. You can manage this in your portal under "Cron Jobs" — pause, edit, or delete it anytime.
+  </ChatMessage>
+</ChatWindow>
 
 ## Multi-Channel: Same friend, different platforms
 
-```
-[Signal message]
-Friend (alice): Hey, what's the status of my todo app?
+<ChatWindow title="Signal DM — alice">
+  <ChatMessage from="friend" name="Alice" channel="Signal">
+    Hey, what's the status of my todo app?
+  </ChatMessage>
 
-Agent: Still running great! 3 pods healthy, all services up.
-       https://todo-alice.your-domain.net is live.
+  <ChatMessage from="agent" name="Agent">
+    Still running great! 3 pods healthy, all services up. `https://todo-alice.your-domain.net` is live.
+  </ChatMessage>
+</ChatWindow>
 
-[Later, on Discord]
-Friend (alice): Can you add a dark mode toggle to the todo app?
+<ChatWindow title="Discord DM — alice">
+  <ChatMessage from="friend" name="Alice" channel="Discord">
+    Can you add a dark mode toggle to the todo app?
+  </ChatMessage>
 
-Agent: Sure! I remember you have the todo app running in your
-       namespace. Let me update the deployment with a new image
-       version that includes dark mode...
-```
+  <ChatMessage from="agent" name="Agent">
+    Sure! I remember you have the todo app running in your namespace. Let me update the deployment with a new image version that includes dark mode...
+  </ChatMessage>
+
+  <ChatAction action="POST /api/friends/alice/namespace/apply → Updated todo-app image" />
+</ChatWindow>
 
 <Aside>
 The agent recognizes Alice across Signal and Discord through the cross-platform identity system. Each channel gets its own session, but the agent has access to the same friend workspace files.

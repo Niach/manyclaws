@@ -1,0 +1,26 @@
+---
+interface Props {
+  from: 'friend' | 'agent';
+  name?: string;
+  channel?: string;
+}
+
+const { from, name, channel } = Astro.props;
+
+const isFriend = from === 'friend';
+const displayName = name || (isFriend ? 'Friend' : 'Agent');
+const avatar = isFriend ? '👤' : '🤖';
+---
+
+<div class:list={['chat-msg', isFriend ? 'chat-friend' : 'chat-agent']}>
+  <div class="chat-avatar">{avatar}</div>
+  <div class="chat-body">
+    <div class="chat-header">
+      <span class="chat-name">{displayName}</span>
+      {channel && <span class="chat-channel">{channel}</span>}
+    </div>
+    <div class="chat-bubble">
+      <slot />
+    </div>
+  </div>
+</div>

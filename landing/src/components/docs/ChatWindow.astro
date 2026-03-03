@@ -1,0 +1,21 @@
+---
+interface Props {
+  title?: string;
+}
+
+const { title } = Astro.props;
+---
+
+<div class="chat-window">
+  {title && (
+    <div class="chat-window-header">
+      <div class="chat-window-dots">
+        <span></span><span></span><span></span>
+      </div>
+      <div class="chat-window-title">{title}</div>
+    </div>
+  )}
+  <div class="chat-window-body">
+    <slot />
+  </div>
+</div>
